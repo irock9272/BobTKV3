@@ -1,268 +1,256 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bob - Your Desktop Pet (Web Edition)</title>
-    <script async src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        #container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 30px;
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        
-        #bobImage {
-            cursor: pointer;
-            transition: transform 0.3s ease;
-        }
-        
-        #bobImage:hover {
-            transform: scale(1.05);
-        }
-        
-        .button-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        
-        button {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 8px;
-            background: #667eea;
-            color: white;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: bold;
-        }
-        
-        button:hover {
-            background: #764ba2;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        button:active {
-            transform: translateY(0);
-        }
-        
-        #output {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            max-height: 150px;
-            overflow-y: auto;
-            text-align: left;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            color: #333;
-        }
-        
-        .status {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-        
-        .error {
-            background: #ffebee;
-            color: #c62828;
-        }
-        
-        .success {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bob</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    #bob-wrap {
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #bobImage {
+      width: 220px;
+      height: 220px;
+      object-fit: contain;
+      image-rendering: pixelated;
+      transition: transform 0.15s ease;
+      display: block;
+    }
+
+    #bob-wrap:active #bobImage {
+      transform: scale(0.95);
+    }
+
+    /* fallback placeholder when image is missing */
+    #bobImage.fallback {
+      background: #2a2a2a;
+      border: 2px dashed #444;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 72px;
+    }
+
+    #speech {
+      min-height: 1.5em;
+      font-size: 15px;
+      color: #aaa;
+      text-align: center;
+      max-width: 320px;
+      transition: opacity 0.2s;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    button {
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #ccc;
+      font-size: 11px;
+      padding: 10px 4px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    button .icon { font-size: 20px; }
+    button:hover { background: #2e2e2e; border-color: #555; }
+    button:active { transform: scale(0.95); }
+
+    #log {
+      width: 100%;
+      max-width: 360px;
+      max-height: 90px;
+      overflow-y: auto;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #666;
+      font-family: monospace;
+    }
+
+    #log div { margin-bottom: 2px; }
+    #log div:last-child { color: #999; }
+
+    /* keyboard hint */
+    #hints {
+      font-size: 11px;
+      color: #444;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-    <div id="container">
-        <h1>🎉 Bob - Web Edition 🎉</h1>
-        <img id="bobImage" src="NormalBob.png" alt="Bob" style="width: 100%; max-width: 300px; border-radius: 10px; margin: 20px 0;">
-        
-        <div id="status" class="status">Loading...</div>
-        
-        <div class="button-grid">
-            <button onclick="petBob()">🎵 Pet Bob (P)</button>
-            <button onclick="noogieBob()">👊 Noogie (N)</button>
-            <button onclick="complimentBob()">💝 Compliment (A)</button>
-            <button onclick="tellJoke()">😂 Joke (D)</button>
-            <button onclick="giveFact()">🧠 Fun Fact (J)</button>
-            <button onclick="roastMe()">🔥 Roast (R)</button>
-            <button onclick="getMood()">😊 Mood (G)</button>
-            <button onclick="getQuote()">✨ Quote (B)</button>
-        </div>
-        
-        <div id="output">
-            <div>Waiting for output...</div>
-        </div>
-    </div>
 
-    <script>
-        let pyodide = null;
-        let noogieCount = 0;
-        const bobImage = document.getElementById('bobImage');
-        let currentMood = 'normal';
-        
-        // Image paths
-        const images = {
-            normal: 'NormalBob.png',
-            happy: 'HappyBob.png',
-            annoyed: 'AnnoyedBob.png',
-            fixing: 'FixingBob.png'
-        };
-        
-        // Initialize Pyodide
-        async function initPyodide() {
-            updateStatus('✅ Ready to interact with Bob!', 'success');
-            drawBob('normal');
-        }
-        
-        function updateStatus(msg, type = '') {
-            const status = document.getElementById('status');
-            status.textContent = msg;
-            status.className = 'status ' + type;
-        }
-        
-        function addOutput(msg) {
-            const output = document.getElementById('output');
-            const line = document.createElement('div');
-            line.textContent = '> ' + msg;
-            output.appendChild(line);
-            output.scrollTop = output.scrollHeight;
-        }
-        
-        // Bob drawing function
-                // Bob drawing function
-        function drawBob(mood) {
-            bobImage.src = images[mood] || images.normal;
-        }
-        
-        function resetMood() {
-            setTimeout(() => drawBob('normal'), 2000);
-        }
-        
-        // Interaction functions
-        function petBob() {
-            drawBob('happy');
-            addOutput('Bob is happy!');
-            resetMood();
-        }
-        
-        function noogieBob() {
-            noogieCount++;
-            drawBob('annoyed');
-            addOutput(`STOP IT! That's ${noogieCount} noogies!`);
-            resetMood();
-        }
-        
-        function complimentBob() {
-            const compliments = [
-                "You're amazing!",
-                "You're a superhero!",
-                "I'm proud of you!",
-                "You have great taste!"
-            ];
-            const msg = compliments[Math.floor(Math.random() * compliments.length)];
-            addOutput(msg);
-        }
-        
-        function tellJoke() {
-            const jokes = [
-                "Why don't skeletons fight? They don't have the guts!",
-                "Why don't programmers like nature? Too many bugs!",
-                "I told my computer I needed a break — now it won't boot."
-            ];
-            const msg = jokes[Math.floor(Math.random() * jokes.length)];
-            addOutput('Bob says: ' + msg);
-        }
-        
-        function giveFact() {
-            const facts = [
-                "A group of flamingos is called a flamboyance.",
-                "Bananas are berries. Strawberries aren't.",
-                "The unicorn is Scotland's national animal."
-            ];
-            const msg = facts[Math.floor(Math.random() * facts.length)];
-            addOutput('Fun fact: ' + msg);
-        }
-        
-        function roastMe() {
-            const roasts = [
-                "You're like a cloud. When you disappear, it's a beautiful day.",
-                "You're slower than a Windows 95 startup.",
-                "You debug like a chicken pecking at a keyboard."
-            ];
-            const msg = roasts[Math.floor(Math.random() * roasts.length)];
-            addOutput('Bob says: ' + msg);
-        }
-        
-        function getMood() {
-            const moods = ["Happy", "Sleepy", "Excited", "Hungry", "Tired"];
-            const mood = moods[Math.floor(Math.random() * moods.length)];
-            addOutput(`Bob is feeling ${mood} today!`);
-        }
-        
-        function getQuote() {
-            const quotes = [
-                "Believe in yourself!",
-                "The early bird gets the worm. Bob gets the donut.",
-                "You're doing amazing, sweetie."
-            ];
-            const msg = quotes[Math.floor(Math.random() * quotes.length)];
-            addOutput('Quote: ' + msg);
-        }
-        
-        // Keyboard shortcuts
-        document.addEventListener('keypress', (e) => {
-            const actions = {
-                'p': petBob,
-                'n': noogieBob,
-                'a': complimentBob,
-                'b': getQuote,
-                'd': tellJoke,
-                'j': giveFact,
-                'g': getMood,
-                'r': roastMe
-            };
-            if (actions[e.key.toLowerCase()]) {
-                actions[e.key.toLowerCase()]();
-            }
-        });
-        
-        // Start on load
-        window.addEventListener('load', initPyodide);
-    </script>
+  <div id="bob-wrap" title="Click to pet Bob!" onclick="petBob()">
+    <img id="bobImage" src="Image/NormalBob.png" alt="Bob" onerror="this.style.fontSize='72px';this.alt='🤖'">
+  </div>
+
+  <div id="speech">Hey. What do you want.</div>
+
+  <div class="buttons">
+    <button onclick="petBob()">      <span class="icon">🤚</span>Pet<br><kbd>P</kbd></button>
+    <button onclick="noogieBob()">   <span class="icon">👊</span>Noogie<br><kbd>N</kbd></button>
+    <button onclick="compliment()">  <span class="icon">💝</span>Compliment<br><kbd>A</kbd></button>
+    <button onclick="joke()">        <span class="icon">😂</span>Joke<br><kbd>D</kbd></button>
+    <button onclick="funFact()">     <span class="icon">🧠</span>Fun Fact<br><kbd>J</kbd></button>
+    <button onclick="quote()">       <span class="icon">✨</span>Quote<br><kbd>B</kbd></button>
+    <button onclick="mood()">        <span class="icon">😊</span>Mood<br><kbd>G</kbd></button>
+    <button onclick="roast()">       <span class="icon">🔥</span>Roast<br><kbd>R</kbd></button>
+  </div>
+
+  <div id="log"></div>
+  <div id="hints">click bob to pet • keyboard shortcuts shown on buttons</div>
+
+<script>
+  const img = document.getElementById('bobImage');
+  const speech = document.getElementById('speech');
+  const log = document.getElementById('log');
+
+  const IMAGES = {
+    normal:  'Image/NormalBob.png',
+    happy:   'Image/HappyBob.png',
+    annoyed: 'Image/AnnoyedBob.png',
+    fixing:  'Image/FixingBob.png',
+  };
+
+  let noogies = 0;
+  let moodTimer = null;
+
+  function setMood(mood) {
+    img.src = IMAGES[mood] ?? IMAGES.normal;
+    clearTimeout(moodTimer);
+    if (mood !== 'normal') {
+      moodTimer = setTimeout(() => { img.src = IMAGES.normal; }, 2200);
+    }
+  }
+
+  function say(text) {
+    speech.textContent = text;
+    addLog(text);
+  }
+
+  function addLog(text) {
+    const d = document.createElement('div');
+    d.textContent = '> ' + text;
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+    // keep log tidy
+    while (log.children.length > 30) log.removeChild(log.firstChild);
+  }
+
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  // ── actions ─────────────────────────────────────────────────────────────
+
+  function petBob() {
+    setMood('happy');
+    say(pick([
+      'oh. that\'s nice i guess.',
+      '...fine. just this once.',
+      '*purrs internally*',
+      'okay okay i like this.',
+    ]));
+  }
+
+  function noogieBob() {
+    noogies++;
+    setMood('annoyed');
+    say(`STOP IT. that's ${noogies} noogie${noogies > 1 ? 's' : ''}!!`);
+  }
+
+  function compliment() {
+    say(pick([
+      'You\'re amazing!',
+      'You\'re a superhero in disguise!',
+      'I\'m proud of you!',
+      'You have great taste in AIs.',
+      'You\'re doing amazing, sweetie.',
+    ]));
+  }
+
+  function joke() {
+    say(pick([
+      'Why don\'t skeletons fight? They don\'t have the guts!',
+      'Why don\'t programmers like nature? Too many bugs!',
+      'I told my computer I needed a break — now it won\'t boot.',
+      'A SQL query walks into a bar, walks up to two tables and asks... "Can I JOIN you?"',
+    ]));
+  }
+
+  function funFact() {
+    say(pick([
+      'A group of flamingos is called a flamboyance.',
+      'Bananas are berries. Strawberries aren\'t.',
+      'The unicorn is Scotland\'s national animal.',
+      'Honey never expires. Archaeologists found 3000-year-old honey in Egyptian tombs.',
+      'A day on Venus is longer than a year on Venus.',
+    ]));
+  }
+
+  function quote() {
+    say(pick([
+      'Believe in yourself!',
+      'The early bird gets the worm. Bob gets the donut.',
+      'You\'re doing amazing, sweetie.',
+      'Rome wasn\'t built in a day. But it was definitely coded in one.',
+    ]));
+  }
+
+  function mood() {
+    const m = pick(['Happy', 'Sleepy', 'Excited', 'Hungry', 'Tired', 'Mischievous']);
+    say(`Bob is feeling ${m} today.`);
+  }
+
+  function roast() {
+    say(pick([
+      'You\'re like a cloud. When you disappear, it\'s a beautiful day.',
+      'You\'re slower than a Windows 95 startup.',
+      'You debug like a chicken pecking at a keyboard.',
+      'Your code looks like it was written by someone falling asleep.',
+    ]));
+  }
+
+  // ── keyboard shortcuts ──────────────────────────────────────────────────
+
+  const keys = { p: petBob, n: noogieBob, a: compliment, d: joke,
+                 j: funFact, b: quote, g: mood, r: roast };
+
+  document.addEventListener('keypress', e => {
+    const fn = keys[e.key.toLowerCase()];
+    if (fn) fn();
+  });
+</script>
 </body>
 </html>
